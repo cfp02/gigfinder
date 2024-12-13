@@ -388,6 +388,12 @@ export default function LeadsPage() {
               >
                 Saved Leads ({savedLeads.length})
               </button>
+              <a
+                href="/dashboard/bulk-import"
+                className="px-3 py-2 text-sm font-semibold rounded-md bg-green-600 text-white hover:bg-green-500"
+              >
+                Bulk Import
+              </a>
             </div>
           </div>
         </div>
