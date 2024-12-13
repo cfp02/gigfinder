@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { MagnifyingGlassIcon, MapPinIcon, StarIcon } from '@heroicons/react/24/outline'
 import axios from 'axios'
 import { estimateCosts } from '@/lib/utils/apiUsage'
@@ -71,10 +71,14 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedLeads, setSavedLeads] = useState<Lead[]>([])
-  const [viewMode, setViewMode] = useState<'search' | 'saved'>('search')
+  const [viewMode, setViewMode] = useState<'search' | 'saved'>('saved')
   const [apiUsage, setApiUsage] = useState({ daily: { date: '', count: 0 }, total: 0 })
   const [costs, setCosts] = useState({ dailyCost: 0, totalCost: 0, remainingCredit: 200, isWithinFreeQuota: true })
   const [cacheStats, setCacheStats] = useState({ totalEntries: 0, savedAPICalls: 0 })
+  const [filterType, setFilterType] = useState<string>('all')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<string>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [debouncedSearch] = useState(() => {
     let timeoutId: NodeJS.Timeout
     return (callback: () => void) => {
@@ -82,6 +86,65 @@ export default function LeadsPage() {
       timeoutId = setTimeout(callback, 500)
     }
   })
+
+  // Filter and sort leads
+  const filteredAndSortedLeads = useMemo(() => {
+    let filtered = [...savedLeads]
+    
+    // Apply type filter
+    if (filterType !== 'all') {
+      filtered = filtered.filter(lead => lead.type === filterType)
+    }
+    
+    // Apply status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(lead => lead.status === filterStatus)
+    }
+    
+    // Apply search term
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      filtered = filtered.filter(lead => 
+        lead.name.toLowerCase().includes(search) ||
+        lead.address.toLowerCase().includes(search) ||
+        (lead.phone && lead.phone.toLowerCase().includes(search)) ||
+        (lead.website && lead.website.toLowerCase().includes(search))
+      )
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name)
+          break
+        case 'type':
+          comparison = a.type.localeCompare(b.type)
+          break
+        case 'rating':
+          comparison = (b.rating || 0) - (a.rating || 0)
+          break
+        case 'status':
+          comparison = a.status.localeCompare(b.status)
+          break
+        case 'lastContact':
+          const dateA = a.lastContact ? new Date(a.lastContact).getTime() : 0
+          const dateB = b.lastContact ? new Date(b.lastContact).getTime() : 0
+          comparison = dateB - dateA
+          break
+      }
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+    
+    return filtered
+  }, [savedLeads, filterType, filterStatus, searchTerm, sortBy, sortOrder])
+
+  // Get unique types for filter
+  const uniqueTypes = useMemo(() => {
+    const types = new Set(savedLeads.map(lead => lead.type))
+    return ['all', ...Array.from(types)]
+  }, [savedLeads])
 
   // Update API usage and stats
   useEffect(() => {
@@ -415,8 +478,96 @@ export default function LeadsPage() {
         </>
       )}
 
+      {viewMode === 'saved' && (
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <div>
+            <label htmlFor="search" className="block text-sm font-medium text-gray-700">
+              Search
+            </label>
+            <input
+              type="text"
+              id="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search leads..."
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="type" className="block text-sm font-medium text-gray-700">
+              Business Type
+            </label>
+            <select
+              id="type"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              {uniqueTypes.map(type => (
+                <option key={type} value={type}>
+                  {type === 'all' ? 'All Types' : type}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+              Status
+            </label>
+            <select
+              id="status"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            >
+              <option value="all">All Statuses</option>
+              <option value="New">New</option>
+              <option value="Contacted">Contacted</option>
+              <option value="Interested">Interested</option>
+              <option value="Not Interested">Not Interested</option>
+              <option value="Client">Client</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="sort" className="block text-sm font-medium text-gray-700">
+              Sort By
+            </label>
+            <div className="mt-1 flex gap-2">
+              <select
+                id="sort"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              >
+                <option value="name">Name</option>
+                <option value="type">Type</option>
+                <option value="rating">Rating</option>
+                <option value="status">Status</option>
+                <option value="lastContact">Last Contact</option>
+              </select>
+              <button
+                onClick={() => setSortOrder(order => order === 'asc' ? 'desc' : 'asc')}
+                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Results count */}
+      {viewMode === 'saved' && (
+        <div className="mt-4 text-sm text-gray-500">
+          Showing {filteredAndSortedLeads.length} of {savedLeads.length} leads
+        </div>
+      )}
+
       {/* Results Table */}
-      {!loading && (viewMode === 'search' ? leads : savedLeads).length > 0 && (
+      {!loading && (viewMode === 'search' ? leads : filteredAndSortedLeads).length > 0 && (
         <div className="mt-8 flow-root">
           <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
             <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
@@ -442,7 +593,7 @@ export default function LeadsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {(viewMode === 'search' ? leads : savedLeads).map((lead) => (
+                    {(viewMode === 'search' ? leads : filteredAndSortedLeads).map((lead) => (
                       <tr key={lead.id}>
                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                           <div>{lead.name}</div>
@@ -509,7 +660,7 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {!loading && !error && (viewMode === 'search' ? leads : savedLeads).length === 0 && (
+      {!loading && !error && (viewMode === 'search' ? leads : filteredAndSortedLeads).length === 0 && (
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-600">
             {viewMode === 'search' 
