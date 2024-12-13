@@ -1,20 +1,7 @@
 import { NextResponse } from 'next/server'
 import { searchPlaces } from '@/lib/api/places'
 import { prisma } from '@/lib/db'
-
-// Business categories to search for comprehensive coverage
-const BUSINESS_CATEGORIES = [
-  { query: 'business establishment', name: 'General Business' },
-  { query: 'retail store shop', name: 'Retail' },
-  { query: 'restaurant cafe bistro', name: 'Restaurant' },
-  { query: 'venue event space', name: 'Event Venue' },
-  { query: 'hotel resort', name: 'Hotel' },
-  { query: 'art gallery museum', name: 'Art & Culture' },
-  { query: 'wedding venue', name: 'Wedding Venue' },
-  { query: 'corporate office business', name: 'Corporate' },
-  { query: 'entertainment venue', name: 'Entertainment' },
-  { query: 'photography studio', name: 'Photography' }
-]
+import { DEFAULT_BUSINESS_TYPES } from '@/lib/constants/businessTypes'
 
 interface ErrorWithMessage {
   message: string
@@ -63,7 +50,7 @@ export async function GET(request: Request) {
     const errors: string[] = []
 
     // Search each category
-    for (const category of BUSINESS_CATEGORIES) {
+    for (const category of DEFAULT_BUSINESS_TYPES) {
       try {
         console.log(`Searching ${category.name}...`)
         const results = await searchPlaces({

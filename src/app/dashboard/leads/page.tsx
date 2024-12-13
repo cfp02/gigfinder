@@ -5,49 +5,8 @@ import { MagnifyingGlassIcon, MapPinIcon, StarIcon } from '@heroicons/react/24/o
 import axios from 'axios'
 import { estimateCosts } from '@/lib/utils/apiUsage'
 import { getCachedResults, cacheResults, getCacheStats, clearCache } from '@/lib/utils/searchCache'
-
-const businessTypes = [
-  { 
-    id: 'all',
-    name: 'All Businesses',
-    query: 'business establishment'
-  },
-  { 
-    id: 'restaurants',
-    name: 'Restaurants & Cafes',
-    query: 'restaurant cafe bistro dining'
-  },
-  { 
-    id: 'retail',
-    name: 'Retail & Boutiques',
-    query: 'retail store shop boutique'
-  },
-  { 
-    id: 'real_estate',
-    name: 'Real Estate',
-    query: 'real estate property homes'
-  },
-  { 
-    id: 'hospitality',
-    name: 'Hotels & Venues',
-    query: 'hotel venue event space wedding'
-  },
-  { 
-    id: 'food_beverage',
-    name: 'Food & Beverage',
-    query: 'brewery winery bar lounge'
-  },
-  { 
-    id: 'wellness',
-    name: 'Health & Wellness',
-    query: 'spa wellness fitness gym'
-  },
-  { 
-    id: 'professional',
-    name: 'Professional Services',
-    query: 'business office firm agency'
-  }
-]
+import { BusinessType, DEFAULT_BUSINESS_TYPES } from '@/lib/constants/businessTypes'
+import Link from 'next/link'
 
 interface Lead {
   id: string
@@ -216,7 +175,7 @@ export default function LeadsPage() {
       } else {
         // Otherwise, search for each selected type
         queries = selectedTypes.map(typeId => {
-          const businessType = businessTypes.find(t => t.id === typeId)
+          const businessType = DEFAULT_BUSINESS_TYPES.find(t => t.id === typeId)
           return businessType?.query || ''
         })
       }
@@ -388,12 +347,18 @@ export default function LeadsPage() {
               >
                 Saved Leads ({savedLeads.length})
               </button>
-              <a
+              <Link
+                href="/dashboard/query-builder"
+                className="px-3 py-2 text-sm font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-500"
+              >
+                Query Builder
+              </Link>
+              <Link
                 href="/dashboard/bulk-import"
                 className="px-3 py-2 text-sm font-semibold rounded-md bg-green-600 text-white hover:bg-green-500"
               >
                 Bulk Import
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -448,7 +413,7 @@ export default function LeadsPage() {
 
           {/* Business Type Filters */}
           <div className="mt-4 flex flex-wrap gap-2">
-            {businessTypes.map((type) => (
+            {DEFAULT_BUSINESS_TYPES.map((type) => (
               <button
                 key={type.id}
                 onClick={() => handleTypeSelection(type.id)}

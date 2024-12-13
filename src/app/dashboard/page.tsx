@@ -1,6 +1,7 @@
 'use client'
 
 import { ArrowUpIcon, UsersIcon, BuildingOfficeIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 
 const stats = [
   { id: 1, name: 'Total Leads', stat: '71,897', icon: UsersIcon, change: '12%', changeType: 'increase' },
@@ -53,27 +54,27 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <h3 className="mt-8 text-base font-semibold leading-6 text-gray-900">Quick Actions</h3>
       <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <button
-          type="button"
+        <Link
+          href="/dashboard/leads"
           className="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           <BuildingOfficeIcon className="mx-auto h-12 w-12 text-gray-400" />
           <span className="mt-2 block text-sm font-semibold text-gray-900">Find New Businesses</span>
-        </button>
-        <button
-          type="button"
+        </Link>
+        <Link
+          href="#"
           className="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           <EnvelopeIcon className="mx-auto h-12 w-12 text-gray-400" />
           <span className="mt-2 block text-sm font-semibold text-gray-900">Create Email Campaign</span>
-        </button>
-        <button
-          type="button"
+        </Link>
+        <Link
+          href="/dashboard/leads"
           className="relative block w-full rounded-lg border-2 border-dashed border-gray-300 p-12 text-center hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
           <span className="mt-2 block text-sm font-semibold text-gray-900">View Active Leads</span>
-        </button>
+        </Link>
       </div>
     </div>
   )
