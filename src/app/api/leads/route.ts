@@ -69,12 +69,12 @@ export async function POST(request: Request) {
   }
 }
 
-// Update a lead's status
+// Update a lead's status and notes
 export async function PUT(request: Request) {
   try {
     const { id, status, notes } = await request.json()
     
-    if (!id || !status) {
+    if (!id) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -84,8 +84,8 @@ export async function PUT(request: Request) {
     const updatedLead = await prisma.lead.update({
       where: { id },
       data: {
-        status,
-        notes: notes || undefined,
+        status: status || undefined,
+        notes: notes !== undefined ? notes : undefined,
         lastContact: status === 'Contacted' ? new Date() : undefined
       }
     })

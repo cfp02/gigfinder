@@ -33,6 +33,7 @@ model Lead {
   lastContact DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  outreachHistory OutreachHistory[]
 }
 
 // Search cache
@@ -45,4 +46,30 @@ model SearchCache {
   timestamp DateTime @default(now())
 
   @@index([query, location, type])
+}
+
+// Email Templates
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  outreachHistory OutreachHistory[]
+}
+
+// Outreach History
+model OutreachHistory {
+  id           String    @id @default(cuid())
+  leadId       String
+  lead         Lead      @relation(fields: [leadId], references: [id])
+  templateId   String?
+  template     EmailTemplate? @relation(fields: [templateId], references: [id])
+  emailContent String    @db.Text
+  sentAt       DateTime  @default(now())
+  response     String?   @db.Text
+  status       String    @default("Sent") // Sent, Responded, No Response
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 } 

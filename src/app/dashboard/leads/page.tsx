@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { MagnifyingGlassIcon, MapPinIcon, StarIcon } from '@heroicons/react/24/outline'
+import { useState, useEffect, useMemo, Fragment } from 'react'
+import { Dialog, Transition } from '@headlessui/react'
+import { MagnifyingGlassIcon, MapPinIcon, StarIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import axios from 'axios'
 import { estimateCosts } from '@/lib/utils/apiUsage'
 import { getCachedResults, cacheResults, getCacheStats, clearCache } from '@/lib/utils/searchCache'
@@ -19,6 +20,101 @@ interface Lead {
   status: 'New' | 'Contacted' | 'Interested' | 'Not Interested' | 'Client'
   notes?: string
   lastContact?: string | null
+}
+
+interface NotesModalProps {
+  lead: Lead | null
+  isOpen: boolean
+  onClose: () => void
+  onSave: (notes: string) => void
+}
+
+function NotesModal({ lead, isOpen, onClose, onSave }: NotesModalProps) {
+  const [notes, setNotes] = useState(lead?.notes || '')
+
+  useEffect(() => {
+    setNotes(lead?.notes || '')
+  }, [lead])
+
+  return (
+    <Transition.Root show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-10" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              enterTo="opacity-100 translate-y-0 sm:scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+            >
+              <Dialog.Panel className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                <div className="absolute right-0 top-0 hidden pr-4 pt-4 sm:block">
+                  <button
+                    type="button"
+                    className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    onClick={onClose}
+                  >
+                    <span className="sr-only">Close</span>
+                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">
+                    <Dialog.Title as="h3" className="text-base font-semibold leading-6 text-gray-900">
+                      Notes for {lead?.name}
+                    </Dialog.Title>
+                    <div className="mt-2">
+                      <textarea
+                        rows={4}
+                        className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add your notes here..."
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    className="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 sm:ml-3 sm:w-auto"
+                    onClick={() => {
+                      onSave(notes)
+                      onClose()
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                    onClick={onClose}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition.Root>
+  )
 }
 
 export default function LeadsPage() {
@@ -45,6 +141,8 @@ export default function LeadsPage() {
       timeoutId = setTimeout(callback, 500)
     }
   })
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [isNotesModalOpen, setIsNotesModalOpen] = useState(false)
 
   // Filter and sort leads
   const filteredAndSortedLeads = useMemo(() => {
@@ -286,6 +384,25 @@ export default function LeadsPage() {
     }
   }
 
+  const updateLeadNotes = async (notes: string) => {
+    if (!selectedLead) return
+
+    try {
+      const response = await axios.put('/api/leads', {
+        id: selectedLead.id,
+        notes
+      })
+      setSavedLeads(prev =>
+        prev.map(lead =>
+          lead.id === selectedLead.id ? response.data : lead
+        )
+      )
+    } catch (error) {
+      console.error('Error updating lead notes:', error)
+      setError('Failed to update notes')
+    }
+  }
+
   return (
     <div className="px-4 sm:px-6 lg:px-8">
       <div className="sm:flex sm:items-center">
@@ -326,39 +443,45 @@ export default function LeadsPage() {
                 </button>
               </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setViewMode('search')}
-                className={`px-3 py-2 text-sm font-semibold rounded-md ${
-                  viewMode === 'search'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300'
-                }`}
-              >
-                Search New Leads
-              </button>
-              <button
-                onClick={() => setViewMode('saved')}
-                className={`px-3 py-2 text-sm font-semibold rounded-md ${
-                  viewMode === 'saved'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300'
-                }`}
-              >
-                Saved Leads ({savedLeads.length})
-              </button>
-              <Link
-                href="/dashboard/query-builder"
-                className="px-3 py-2 text-sm font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-500"
-              >
-                Query Builder
-              </Link>
-              <Link
-                href="/dashboard/bulk-import"
-                className="px-3 py-2 text-sm font-semibold rounded-md bg-green-600 text-white hover:bg-green-500"
-              >
-                Bulk Import
-              </Link>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setViewMode('search')}
+                  className={`px-3 py-2 text-sm font-semibold rounded-md ${
+                    viewMode === 'search'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300'
+                  }`}
+                >
+                  Search New Leads
+                </button>
+                <button
+                  onClick={() => setViewMode('saved')}
+                  className={`px-3 py-2 text-sm font-semibold rounded-md ${
+                    viewMode === 'saved'
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300'
+                  }`}
+                >
+                  Saved Leads ({savedLeads.length})
+                </button>
+              </div>
+              {viewMode === 'search' && (
+                <div className="flex gap-3">
+                  <Link
+                    href="/dashboard/query-builder"
+                    className="px-3 py-2 text-sm font-semibold rounded-md text-orange-600 ring-1 ring-inset ring-orange-600 hover:bg-orange-50"
+                  >
+                    Query Builder
+                  </Link>
+                  <Link
+                    href="/dashboard/bulk-import"
+                    className="px-3 py-2 text-sm font-semibold rounded-md text-green-600 ring-1 ring-inset ring-green-600 hover:bg-green-50"
+                  >
+                    Bulk Import
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -546,19 +669,19 @@ export default function LeadsPage() {
                 <table className="min-w-full divide-y divide-gray-300">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                      <th scope="col" className="w-96 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
                         Business
                       </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      <th scope="col" className="w-32 px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Type
                       </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      <th scope="col" className="w-40 px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Contact
                       </th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      <th scope="col" className="w-32 px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                         Status
                       </th>
-                      <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                      <th scope="col" className="w-24 relative py-3.5 pl-3 pr-4 sm:pr-6">
                         <span className="sr-only">Actions</span>
                       </th>
                     </tr>
@@ -566,9 +689,11 @@ export default function LeadsPage() {
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {(viewMode === 'search' ? leads : filteredAndSortedLeads).map((lead) => (
                       <tr key={lead.id}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
-                          <div>{lead.name}</div>
-                          <div className="text-gray-500">{lead.address}</div>
+                        <td className="py-4 pl-4 pr-3 sm:pl-6">
+                          <div className="text-sm font-medium text-gray-900">{lead.name}</div>
+                          <div className="max-w-xs overflow-x-auto text-sm text-gray-500 scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400">
+                            {lead.address}
+                          </div>
                           {lead.rating && (
                             <div className="flex items-center text-gray-500">
                               <StarIcon className="h-4 w-4 text-yellow-400" />
@@ -616,8 +741,14 @@ export default function LeadsPage() {
                               {savedLeads.some(l => l.id === lead.id) ? 'Saved' : 'Save Lead'}
                             </button>
                           ) : (
-                            <button className="text-indigo-600 hover:text-indigo-900">
-                              Add Notes
+                            <button
+                              onClick={() => {
+                                setSelectedLead(lead)
+                                setIsNotesModalOpen(true)
+                              }}
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              {lead.notes ? 'Edit Notes' : 'Add Notes'}
                             </button>
                           )}
                         </td>
@@ -665,6 +796,17 @@ export default function LeadsPage() {
           </div>
         </div>
       )}
+
+      {/* Notes Modal */}
+      <NotesModal
+        lead={selectedLead}
+        isOpen={isNotesModalOpen}
+        onClose={() => {
+          setIsNotesModalOpen(false)
+          setSelectedLead(null)
+        }}
+        onSave={updateLeadNotes}
+      />
     </div>
   )
 } 
