@@ -17,7 +17,7 @@ interface Lead {
   phone?: string
   website?: string
   rating?: number
-  status: 'New' | 'Contacted' | 'Interested' | 'Not Interested' | 'Client'
+  status: 'New' | 'Contacted' | 'Interested' | 'Not Interested' | 'Not Ready' | 'Unsure' | 'Client'
   notes?: string
   lastContact?: string | null
 }
@@ -621,6 +621,8 @@ export default function LeadsPage() {
               <option value="Contacted">Contacted</option>
               <option value="Interested">Interested</option>
               <option value="Not Interested">Not Interested</option>
+              <option value="Not Ready">Not Ready</option>
+              <option value="Unsure">Unsure</option>
               <option value="Client">Client</option>
             </select>
           </div>
@@ -721,6 +723,8 @@ export default function LeadsPage() {
                               <option value="Contacted">Contacted</option>
                               <option value="Interested">Interested</option>
                               <option value="Not Interested">Not Interested</option>
+                              <option value="Not Ready">Not Ready</option>
+                              <option value="Unsure">Unsure</option>
                               <option value="Client">Client</option>
                             </select>
                           ) : (
